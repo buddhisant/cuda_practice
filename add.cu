@@ -1,29 +1,4 @@
-//#include <torch/torch.h>
-//#include <iostream>
-//
-//#include <ATen/ATen.h>
-//#include <ATen/cuda/CUDAContext.h>
-//
-//#include <THC/THC.h>
-//#include <THC/THCDeviceUtils.cuh>
-//
-//#include <vector>
-//#include <iostream>
-//#include <cmath>
-//
-//#include <torch/extension.h>
-//
-//#define CHECK_CUDA(x) \
-//	TORCH_CHECK(x.device().is_cuda(), #x "must be a CUDA tensor")
-//
-//int main() {
-//  at::Tensor tensor = at::rand({2, 3});
-//  at::Tensor tensor_gpu = tensor.cuda();
-//  CHECK_CUDA(tensor_gpu);
-//  std::cout << tensor_gpu << std::endl;
-//  return 0;
-//}
-
+/*利用cuda完成两个1024*1024矩阵的加法*/
 #include<iostream>
 #include<stdlib.h>
 #include<sys/time.h>
@@ -74,6 +49,7 @@ int main()
 	}
 	for(int i=0;i<cols;i++)
 	{
+		//ad, bd, cd是一维向量，如果在gpu上按照二维矩阵进行运算，则需要将其和Ad, Bd, Cd建立对应关系，建立对应关系的过程在cpu上完成
 		A[i]=ad+i*rows;
 		B[i]=bd+i*rows;
 		C[i]=cd+i*rows;
