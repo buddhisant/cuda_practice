@@ -15,5 +15,5 @@ cuda编程简单实践
 在linux上运行如下命令：
 * git clone https://github.com/buddhisant/cuda_practice.git
 * cd cuda_practice
-* nvcc multiply -o multiply
+* nvcc multiply.cu -o multiply
 * ./multiply
