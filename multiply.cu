@@ -1,32 +1,34 @@
-/*利用cuda完成两个1024*1024矩阵的加法*/
+/*用gpu实现2个矩阵之间的乘法*/
 #include<iostream>
 #include<stdlib.h>
 #include<sys/time.h>
 #include<math.h>
 #include"cuda_runtime.h"
 
+using namespace std;
+
 #define cols 1024
 #define rows 1024
 
-using namespace std;
-
-__global__ void Add(float** Ad,float** Bd,float** Cd)
+__global__ void multiply(float**Ad,float**Bd,float**Cd)
 {
 	int x = blockDim.x*blockIdx.x+threadIdx.x;
 	int y = blockDim.y*blockIdx.y+threadIdx.y;
-	if(x<cols && y<rows)
+	if(x<rows && y<cols)
 	{
-		Cd[y][x]=Ad[y][x]+Bd[y][x];
+		for(int i=0;i<cols;i++)
+		{
+				Cd[y][x]+=Ad[y][i]*Bd[i][x];
+		}
 	}
 }
 
 int main()
 {
 	struct timeval start, end;
+	int n=cols*rows;
 	float **A,**B,**C,**Ad,**Bd,**Cd;
 	float *a,*b,*c,*ad,*bd,*cd;
-	int n=rows * cols;
-
 	A=new float* [cols];
 	B=new float* [cols];
 	C=new float* [cols];
@@ -43,38 +45,38 @@ int main()
 
 	for(int i=0;i<n;i++)
 	{
-		a[i]=2.0;
-		b[i]=2.0;
+		a[i]=2;
+		b[i]=2;
 	}
+
 	for(int i=0;i<cols;i++)
 	{
-		//ad, bd, cd是一维向量，如果在gpu上按照二维矩阵进行运算，则需要将其和Ad, Bd, Cd建立对应关系，建立对应关系的过程在cpu上完成
 		A[i]=ad+i*rows;
 		B[i]=bd+i*rows;
 		C[i]=cd+i*rows;
 	}
 
-	gettimeofday( &start, NULL);
-	cudaMemcpy(Ad,A,cols*sizeof(float*),cudaMemcpyHostToDevice);
-	cudaMemcpy(Bd,B,cols*sizeof(float*),cudaMemcpyHostToDevice);
-	cudaMemcpy(Cd,C,cols*sizeof(float*),cudaMemcpyHostToDevice);
-	cudaMemcpy(ad,a,n*sizeof(float),cudaMemcpyHostToDevice);
-	cudaMemcpy(bd,b,n*sizeof(float),cudaMemcpyHostToDevice);
+	gettimeofday( &start, NULL);//以开始向gpu拷贝数据为起点，记录时间
+	cudaMemcpy(Ad,A,sizeof(float*)*cols,cudaMemcpyHostToDevice);
+	cudaMemcpy(Bd,B,sizeof(float*)*cols,cudaMemcpyHostToDevice);
+	cudaMemcpy(Cd,C,sizeof(float*)*cols,cudaMemcpyHostToDevice);
+	cudaMemcpy(ad,a,sizeof(float)*n,cudaMemcpyHostToDevice);
+	cudaMemcpy(bd,b,sizeof(float)*n,cudaMemcpyHostToDevice);
 
 	dim3 dimBlock(16,16);
 	dim3 dimGrid(cols/16+1,rows/16+1);
-	Add<<<dimGrid,dimBlock>>>(Ad,Bd,Cd);
+	multiply<<<dimGrid,dimBlock>>>(Ad,Bd,Cd);
+	cudaMemcpy(c,cd,sizeof(float)*n,cudaMemcpyDeviceToHost);
+	gettimeofday( &end, NULL );//以从gpu返回计算数据为终点，记录时间
 
-	cudaMemcpy(c,cd,n*sizeof(float),cudaMemcpyDeviceToHost);
-	gettimeofday( &end, NULL );
-
-	float target=4.0;
+	float target=4096;
 	float error=0.0;
 	for(int i=0;i<n;i++)
 	{
-		error+=abs(target-c[i]);
+		error+=abs(c[i]-target);
 	}
 	cout<<"error is "<<error<<endl;
+
 	int timeuse = 1000000 * ( end.tv_sec - start.tv_sec ) + end.tv_usec - start.tv_usec;
 	cout << "total time is " << timeuse/1000 << "ms" <<endl;
 	delete [] a;
@@ -83,12 +85,12 @@ int main()
 	delete [] A;
 	delete [] B;
 	delete [] C;
+
 	cudaFree(Ad);
 	cudaFree(Bd);
 	cudaFree(Cd);
 	cudaFree(ad);
 	cudaFree(bd);
 	cudaFree(cd);
-
 	return 0;
 }
